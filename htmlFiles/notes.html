@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        section {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        form {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        form input, form #noteContent {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        #noteContent {
+            min-height: 100px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            outline: none;
+            overflow-wrap: break-word;
+        }
+
+        .note {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .highlight {
+            background-color: yellow;
+        }
+
+        .highlight-btn {
+            background-color: #f0ad4e;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .highlight-btn:hover {
+            background-color: #ec971f;
+        }
+
+        .remove-btn {
+            background-color: #d9534f;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            position: absolute;
+            right: 10px;
+            top: 10px;
+        }
+
+        .remove-btn:hover {
+            background-color: #c9302c;
+        }
+    </style>
+</head>
+<body>
+    <section>
+        <h2>Notes</h2>
+        <p>Add new notes below:</p>
+
+        <form id="noteForm">
+            <input type="text" id="noteHeading" placeholder="Enter Note Heading" required>
+            <input type="date" id="noteDate" required>
+            <div id="noteContent" contenteditable="true" placeholder="Enter your notes"></div>
+            <button type="button" id="highlightSelection" class="highlight-btn">Highlight Selected Text</button>
+            <button type="button" onclick="addNote()">Add Note</button>
+        </form>
+
+        <div id="notesContainer"></div>
+    </section>
+
+    <script>
+        // Function to highlight selected text inside the contenteditable div
+        document.getElementById('highlightSelection').addEventListener('click', () => {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const span = document.createElement('span');
+                span.className = 'highlight';
+                range.surroundContents(span);
+            }
+        });
+
+        // Function to add note
+        function addNote() {
+            const heading = document.getElementById('noteHeading').value;
+            const date = document.getElementById('noteDate').value;
+            const content = document.getElementById('noteContent').innerHTML;
+
+            if (!heading || !date || !content) {
+                alert("Please fill out all fields.");
+                return;
+            }
+
+            // Create the note object
+            const note = {
+                heading,
+                date,
+                content
+            };
+
+            // Save the note to localStorage
+            let notes = JSON.parse(localStorage.getItem('notes')) || [];
+            notes.push(note);
+            localStorage.setItem('notes', JSON.stringify(notes));
+
+            // Add the note to the page
+            displayNote(note);
+
+            // Clear the form fields
+            document.getElementById('noteHeading').value = '';
+            document.getElementById('noteDate').value = '';
+            document.getElementById('noteContent').innerHTML = '';
+        }
+
+        // Function to display a single note
+        function displayNote(note) {
+            const noteDiv = document.createElement('div');
+            noteDiv.classList.add('note');
+
+            const noteHeading = document.createElement('h3');
+            noteHeading.textContent = note.heading;
+
+            const noteDate = document.createElement('p');
+            noteDate.textContent = `Date: ${note.date}`;
+
+            const noteContent = document.createElement('p');
+            noteContent.innerHTML = note.content;
+
+            const removeButton = document.createElement('button');
+            removeButton.classList.add('remove-btn');
+            removeButton.textContent = "Remove Note";
+            removeButton.onclick = function () {
+                noteDiv.remove();
+                removeNoteFromStorage(note);
+            };
+
+            noteDiv.appendChild(noteHeading);
+            noteDiv.appendChild(noteDate);
+            noteDiv.appendChild(noteContent);
+            noteDiv.appendChild(removeButton);
+
+            document.getElementById('notesContainer').appendChild(noteDiv);
+        }
+
+        // Function to remove a note from localStorage
+        function removeNoteFromStorage(noteToRemove) {
+            let notes = JSON.parse(localStorage.getItem('notes')) || [];
+            notes = notes.filter(note => note.heading !== noteToRemove.heading || note.date !== noteToRemove.date || note.content !== noteToRemove.content);
+            localStorage.setItem('notes', JSON.stringify(notes));
+        }
+
+        // Function to load notes from localStorage when the page loads
+        function loadNotes() {
+            const notes = JSON.parse(localStorage.getItem('notes')) || [];
+            notes.forEach(note => {
+                displayNote(note);
+            });
+        }
+
+        // Load notes when the page is loaded
+        window.onload = loadNotes;
+
+    </script>
+</body>
+</html>

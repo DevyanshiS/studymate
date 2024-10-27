@@ -1,0 +1,102 @@
+@font-face {
+    font-family: 'Satoshi-Light';
+    src: url('../fonts/Satoshi-Light.woff') format('woff');
+    font-weight: 300;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Satoshi-Regular';
+    src: url('../fonts/Satoshi-Regular.woff') format('woff');
+    font-weight: 400;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Satoshi-Medium';
+    src: url('../fonts/Satoshi-Medium.woff') format('woff');
+    font-weight: 500;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Satoshi-Bold';
+    src: url('../fonts/Satoshi-Bold.woff') format('woff');
+    font-weight: 700;
+    font-display: swap;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Satoshi-Black';
+    src: url('../fonts/Satoshi-Black.woff') format('woff');
+    font-weight: 900;
+    font-display: swap;
+    font-style: normal;
+  }
+
+    
+
+*, ::before, ::after{ margin: 0; box-sizing: border-box; }
+html{ font-size: 15px; scroll-behavior: smooth; }
+body{ font: 16px/1.4 Satoshi-medium; max-width: 1200px; margin: auto; }
+a{ text-decoration: none; }
+li{ list-style: none; }
+label{ display: block; }
+
+.row{ display: flex; flex-flow: row wrap; margin: 0 -1rem; }
+[class^="col-"]{ flex: 1 0 auto; padding: 0 1rem; }
+.col-1{ flex-basis: 8.33%; max-width: 8.33%; }
+.col-2{ flex-basis: 16.66%; max-width: 16.66%; }
+.col-3{ flex-basis: 25%; max-width: 25%; }       /* (3/12)*100 */
+.col-4{ flex-basis: 33.33%; max-width: 33.33%; } 
+.col-6{ flex-basis: 50%; max-width: 50%; }
+.col-8{ flex-basis: 66.66%; max-width: 66.66%; }
+.col-9{ flex-basis: 75%; max-width: 75%; }      /* (9/12)*100 */
+.col-10{ flex-basis: 83.33%; max-width: 83.33%; } 
+.col-11{ flex-basis: 91.66%; max-width: 91.66%; }
+.col-12{ flex-basis: 100%; max-width: 100%; } 
+
+
+
+.content{ display: flex; padding: 20px; align-items: center; justify-content: space-between; }
+.content header h3{ color: #000; }
+nav ul{ display: flex;}
+nav ul li{ margin-right: 20px; }
+nav ul li a{ padding: 10px; color: #000; font-weight: 600; }
+
+
+main{ padding: 20px 0 20px; }
+
+
+.welcomeSection { display: flex;  justify-content: space-between; padding: 20px; gap: 50px; align-items: center; background-color: #36829e;
+    border-radius: 15px; }
+.welcomeSectionText { padding: 20px; text-align: left; }
+.welcomeSectionText h1{ font-size: 5.5rem; text-align: center; }
+.welcomeSectionText p{ margin-top: 20px; font-size: 2rem; color: #373636; line-height: 1.8;  text-align: center; }
+
+
+
+/* To-Do List Styles */
+#todo-app { margin-top: 20px; }
+#todo-input { padding: 8px; width: 60%; margin-right: 10px; font-size: 16px; }
+#add-todo { padding: 8px 12px; font-size: 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none; }
+#todo-list { list-style: none; padding: 0; margin-top: 20px; }
+#todo-list li { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ccc; }
+#todo-list li .task { cursor: pointer; }
+#todo-list li .task.completed { text-decoration: line-through; color: #888; }
+#todo-list li .delete-task { background-color: red; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+
+footer{ margin: 20px 50px; }
+footer .logo{ display: flex; text-align: center; }
+footer .logo img{ margin-right: 5px; }
+.reserved{ text-align: center; padding: 20px; opacity: 0.4; }
+.info h4{ margin-bottom: 5px; font-family: 'Satoshi-Bold' }
+.info p{ line-height: 2; }
+
+
+/* RESPONSIVE */
+@media screen and (max-width:1220px) {}
+@media screen and (max-width:980px) {}
+/* MOBILE */
+@media screen and (max-width:767px) {}
+@media screen and (max-width:460px) {}

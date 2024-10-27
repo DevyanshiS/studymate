@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syllabus</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .upload-section, .manual-input-section {
+            margin: 20px 0;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        
+        #syllabusHeading{
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #fileResult, #syllabusResult, #uploadedContent {
+            margin-top: 10px;
+            color: green;
+            white-space: pre-wrap;
+        }
+
+        .file-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .file-list li {
+            margin-bottom: 10px;
+        }
+
+        .file-link {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Initially hide the uploaded files */
+        #uploadedContent {
+            display: none;
+        }
+
+        .delete-btn {
+            background-color: red;
+            color: white;
+            margin-left: 10px;
+            cursor: pointer;
+            padding: 5px;
+            border: none;
+        }
+
+        .delete-btn:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h2>Syllabus</h2>
+        <p>You can either upload your syllabus or type it manually</p>
+    </header>
+
+    <section>
+        <h4>Upload Syllabus File</h4>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <label for="syllabusFile">Choose a file:</label>
+            <input type="file" id="syllabusFile" name="syllabusFile">
+            <button type="submit">Upload</button>
+        </form>
+        <div id="fileResult"></div>
+
+        <br>
+
+        <!-- Button to toggle visibility of uploaded files -->
+        <button id="viewFilesBtn">View Uploaded Files</button>
+
+        <!-- Uploaded files will be shown here -->
+        <ul id="uploadedContent" class="file-list"></ul>
+    </section>
+    <br>
+    <br>
+    <div class="manual-input-section">
+        <h4>Type Syllabus</h4>
+        <form id="manualSyllabusForm">
+            <label for="syllabusText">Syllabus:</label>
+            <input type="text" id="syllabusHeading" placeholder="Enter Syllabus Heading" required>
+            <textarea id="syllabusText" rows="10" placeholder="Type your syllabus here..."></textarea>
+            <button type="submit">Save Syllabus</button>
+        </form>
+        <button id="viewSyllabusBtn">View Saved Syllabus</button>
+        <div id="syllabusResult"></div>
+    </div>
+
+    <script>
+        // IndexedDB setup
+        let db;
+        const request = indexedDB.open("SyllabusDB", 1);
+        let uploadedFiles = [];
+
+
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            const objectStore = db.createObjectStore("syllabusStore", { keyPath: "id" });
+            objectStore.createIndex("syllabus", "syllabus", { unique: false });
+
+            const fileStore = db.createObjectStore("fileStore", { keyPath: "name" });
+            fileStore.createIndex("fileURL", "fileURL", { unique: false });
+        };
+
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            loadSyllabus(); // Load saved syllabus from IndexedDB
+            loadUploadedFiles(); // Load uploaded files from IndexedDB
+        };
+
+        request.onerror = function(event) {
+            console.error("IndexedDB error:", event.target.errorCode);
+        };
+
+        // Function to save syllabus to IndexedDB
+        function saveSyllabusToDB(syllabusText) {
+            const transaction = db.transaction(["syllabusStore"], "readwrite");
+            const objectStore = transaction.objectStore("syllabusStore");
+
+            // Clear existing syllabus and save the new one
+            objectStore.clear().onsuccess = function() {
+                const request = objectStore.add({ id: 1, syllabus: syllabusText });
+
+                request.onsuccess = function() {
+                    document.getElementById('syllabusResult').innerText = 'Syllabus saved successfully!';
+                };
+
+                request.onerror = function() {
+                    document.getElementById('syllabusResult').innerText = 'Failed to save syllabus.';
+                };
+            };
+        }
+
+        // Function to load syllabus from IndexedDB
+        function loadSyllabus() {
+            const transaction = db.transaction(["syllabusStore"], "readonly");
+            const objectStore = transaction.objectStore("syllabusStore");
+            const request = objectStore.get(1);
+
+            request.onsuccess = function(event) {
+                if (request.result) {
+                    document.getElementById('syllabusText').value = request.result.syllabus;
+                }
+            };
+
+            request.onerror = function() {
+                console.error("Failed to load syllabus.");
+            };
+        }
+
+        document.getElementById('manualSyllabusForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const syllabusText = document.getElementById('syllabusText').value;
+
+            if (syllabusText.trim() !== '') {
+                saveSyllabusToDB(syllabusText);
+            } else {
+                document.getElementById('syllabusResult').innerText = 'Please type your syllabus.';
+            }
+        });
+
+        // Handling file uploads
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('syllabusFile');
+            const file = fileInput.files[0];
+
+            if (file) {
+                // Read file content and store
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fileURL = URL.createObjectURL(file);
+                    saveFileToDB(file.name, fileURL);  // Save file to IndexedDB
+                    displayUploadedFiles();  // Display uploaded files
+                    document.getElementById('fileResult').innerText = `File "${file.name}" uploaded successfully!`;
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                document.getElementById('fileResult').innerText = 'Please choose a file to upload.';
+            }
+        });
+
+
+        // Open the IndexedDB database
+        function openDatabase() {
+            const request = indexedDB.open("myDatabase", 1);
+
+            request.onupgradeneeded = function(event) {
+                const db = event.target.result;
+                const fileStore = db.createObjectStore("fileStore", { keyPath: "name" });
+            };
+        
+            request.onsuccess = function(event) {
+                db = event.target.result;
+                loadUploadedFiles(); // Load files on database open
+            };
+        
+            request.onerror = function(event) {
+                console.error("Error opening database:", event.target.errorCode);
+            };
+        }
+
+        // Handling file uploads
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('syllabusFile');
+            const file = fileInput.files[0];
+        
+            if (file) {
+                // Check if the file already exists in IndexedDB
+                checkFileExists(file.name).then(exists => {
+                    if (exists) {
+                        alert(`File "${file.name}" already exists.`);
+                    } else {
+                        // Proceed with uploading the file
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const fileURL = URL.createObjectURL(file);
+                            saveFileToDB(file.name, fileURL);  // Save file to IndexedDB
+                            displayUploadedFiles();  // Display uploaded files
+                            document.getElementById('fileResult').innerText = `File "${file.name}" uploaded successfully!`;
+                        };
+                        reader.readAsArrayBuffer(file);
+                    }
+                });
+            } else {
+                document.getElementById('fileResult').innerText = 'Please choose a file to upload.';
+            }
+        });
+
+        // Function to check if a file with the same name exists in IndexedDB
+        function checkFileExists(fileName) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(["fileStore"], "readonly");
+                const fileStore = transaction.objectStore("fileStore");
+                const request = fileStore.get(fileName);
+            
+                request.onsuccess = function(event) {
+                    resolve(!!request.result);  // If file exists, resolve true, else false
+                };
+            
+                request.onerror = function(event) {
+                    console.error("Error checking if file exists:", event.target.errorCode);
+                    reject(event.target.errorCode);
+                };
+            });
+        }
+
+
+        // Function to save uploaded file to IndexedDB
+        function saveFileToDB(fileName, fileURL) {
+            const transaction = db.transaction(["fileStore"], "readwrite");
+            const fileStore = transaction.objectStore("fileStore");
+
+            // Check if the file already exists in the uploadedFiles array
+            if (uploadedFiles.some(file => file.name === fileName)) {
+                alert(`File "${fileName}" already exists.`);
+                return;
+            }
+        
+            const addRequest = fileStore.add({ name: fileName, fileURL: fileURL });
+            addRequest.onsuccess = function() {
+                console.log("File saved to IndexedDB:", fileName);
+                uploadedFiles.push({ name: fileName, fileURL: fileURL }); // Update the uploadedFiles array
+                displayUploadedFiles(); // Refresh the display
+            };
+            addRequest.onerror = function(event) {
+                console.error("Error saving file:", event.target.error);
+            };
+        }
+
+        // Function to load uploaded files from IndexedDB
+        function loadUploadedFiles() {
+            const transaction = db.transaction(["fileStore"], "readonly");
+            const fileStore = transaction.objectStore("fileStore");
+
+            const request = fileStore.getAll();
+
+            request.onsuccess = function(event) {
+                uploadedFiles = event.target.result; // Store the files in the array
+                displayUploadedFiles(); // Display the updated list
+            };
+        
+            request.onerror = function(event) {
+                console.error("Error loading files:", event.target.errorCode);
+            };
+        }
+
+
+        // Function to display uploaded files with download and delete buttons
+        function displayUploadedFiles() {
+            const fileList = document.getElementById('uploadedContent');
+            fileList.innerHTML = ''; // Clear current list
+
+            if (uploadedFiles.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = "No files uploaded.";
+                fileList.appendChild(li);
+                return;
+            }
+        
+            uploadedFiles.forEach(file => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = file.fileURL;
+                a.download = file.name; // Allow file download
+                a.innerText = file.name;
+                a.classList.add('file-link');
+            
+                // Create a delete button for each file
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerText = 'Delete';
+                deleteBtn.classList.add('delete-btn');
+                deleteBtn.onclick = function() {
+                    deleteFileFromDB(file.name);  // Delete file from IndexedDB
+                };
+            
+                li.appendChild(a);
+                li.appendChild(deleteBtn);
+                fileList.appendChild(li);
+            });
+        }
+
+
+        // Function to delete a file from IndexedDB
+        function deleteFileFromDB(fileName) {
+            const transaction = db.transaction(["fileStore"], "readwrite");
+            const fileStore = transaction.objectStore("fileStore");
+
+            const request = fileStore.delete(fileName);
+
+            request.onsuccess = function() {
+                console.log(`File "${fileName}" deleted from IndexedDB.`);
+                // Update the uploadedFiles array after deletion
+                uploadedFiles = uploadedFiles.filter(file => file.name !== fileName);
+                displayUploadedFiles(); // Refresh the file list
+            };
+        
+            request.onerror = function(event) {
+                console.error("Error deleting file:", event.target.errorCode);
+            };
+        }
+
+
+        // Toggle uploaded files visibility
+        document.getElementById('viewFilesBtn').addEventListener('click', function() {
+            const uploadedContent = document.getElementById('uploadedContent');
+            if (uploadedContent.style.display === 'none') {
+                uploadedContent.style.display = 'block';
+                displayUploadedFiles();  // Ensure list is updated
+            } else {
+                uploadedContent.style.display = 'none';
+            }
+        });
+
+        openDatabase();
+
+
+        document.getElementById("manualSyllabusForm").onsubmit = event => {
+            event.preventDefault();
+            const heading = document.getElementById("syllabusHeading").value;
+            const content = document.getElementById("syllabusText").value;
+
+            if (heading && content) {
+                let syllabus = JSON.parse(localStorage.getItem("syllabus")) || [];
+                syllabus.push({ heading, content });
+                localStorage.setItem("syllabus", JSON.stringify(syllabus));
+                
+                document.getElementById("syllabusHeading").value = "";
+                document.getElementById("syllabusText").value = "";
+                document.getElementById("syllabusResult").textContent = "Syllabus saved successfully.";
+                document.getElementById("viewSyllabusBtn").style.display = "inline-block";
+            }
+        };
+
+        // View Saved Syllabus from Local Storage
+        document.getElementById("viewSyllabusBtn").onclick = () => {
+            const syllabus = JSON.parse(localStorage.getItem("syllabus")) || [];
+            const syllabusResult = document.getElementById("syllabusResult");
+            syllabusResult.innerHTML = ""; // Clear previous content
+
+            syllabus.forEach((item, index) => {
+                const div = document.createElement("div");
+                div.innerHTML = `<strong>${item.heading}</strong><p>${item.content}</p>`;
+                
+                const deleteBtn = document.createElement("button");
+                deleteBtn.textContent = "Delete";
+                deleteBtn.classList.add("delete-btn");
+                deleteBtn.onclick = () => {
+                    syllabus.splice(index, 1);
+                    localStorage.setItem("syllabus", JSON.stringify(syllabus));
+                    div.remove();
+                    document.getElementById("syllabusResult").textContent = "Syllabus deleted.";
+                };
+
+                div.appendChild(deleteBtn);
+                syllabusResult.appendChild(div);
+            });
+        };
+
+    </script>
+</body>
+</html>

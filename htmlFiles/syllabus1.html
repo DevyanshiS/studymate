@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syllabus</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .upload-section, .manual-input-section {
+            margin: 20px 0;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        #syllabusHeading {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #fileResult, #syllabusResult, #uploadedContent {
+            margin-top: 10px;
+            color: green;
+            white-space: pre-wrap;
+        }
+
+        .file-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .file-list li {
+            margin-bottom: 10px;
+        }
+
+        .file-link {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+
+        #uploadedContent {
+            display: none;
+        }
+
+        .delete-btn {
+            background-color: red;
+            color: white;
+            margin-left: 10px;
+            cursor: pointer;
+            padding: 5px;
+            border: none;
+        }
+
+        .delete-btn:hover {
+            background-color: darkred;
+        }
+
+        #syllabusResult {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h2>Syllabus</h2>
+        <p>You can either upload your syllabus or type it manually</p>
+    </header>
+
+    <section>
+        <h4>Upload Syllabus File</h4>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <label for="syllabusFile">Choose a file:</label>
+            <input type="file" id="syllabusFile" name="syllabusFile">
+            <button type="submit">Upload</button>
+        </form>
+        <div id="fileResult"></div>
+
+        <br>
+
+        <button id="viewFilesBtn">View Uploaded Files</button>
+
+        <ul id="uploadedContent" class="file-list"></ul>
+    </section>
+    <br>
+    <br>
+    <div class="manual-input-section">
+        <h4>Type Syllabus</h4>
+        <form id="manualSyllabusForm">
+            <label for="syllabusText">Syllabus:</label>
+            <input type="text" id="syllabusHeading" placeholder="Enter Syllabus Heading" required>
+            <textarea id="syllabusText" rows="10" placeholder="Type your syllabus here..."></textarea>
+            <button type="submit">Save Syllabus</button>
+        </form>
+        <button id="viewSyllabusBtn">View Saved Syllabus</button>
+        <div id="syllabusResult"></div>
+    </div>
+
+    <script>
+        let db;
+        const request = indexedDB.open("SyllabusDB", 1);
+        let uploadedFiles = [];
+
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            const objectStore = db.createObjectStore("syllabusStore", { keyPath: "id" });
+            objectStore.createIndex("syllabus", "syllabus", { unique: false });
+
+            const fileStore = db.createObjectStore("fileStore", { keyPath: "name" });
+            fileStore.createIndex("fileURL", "fileURL", { unique: false });
+        };
+
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            loadSyllabus();
+            loadUploadedFiles();
+        };
+
+        request.onerror = function(event) {
+            console.error("IndexedDB error:", event.target.errorCode);
+        };
+
+        function saveSyllabusToDB(syllabusText) {
+            const transaction = db.transaction(["syllabusStore"], "readwrite");
+            const objectStore = transaction.objectStore("syllabusStore");
+
+            objectStore.clear().onsuccess = function() {
+                const request = objectStore.add({ id: 1, syllabus: syllabusText });
+
+                request.onsuccess = function() {
+                    document.getElementById('syllabusResult').innerText = 'Syllabus saved successfully!';
+                    document.getElementById('viewSyllabusBtn').style.display = 'inline';
+                };
+
+                request.onerror = function() {
+                    document.getElementById('syllabusResult').innerText = 'Failed to save syllabus.';
+                };
+            };
+        }
+
+        function loadSyllabus() {
+            const transaction = db.transaction(["syllabusStore"], "readonly");
+            const objectStore = transaction.objectStore("syllabusStore");
+            const request = objectStore.get(1);
+
+            request.onsuccess = function(event) {
+                if (request.result) {
+                    document.getElementById('syllabusText').value = request.result.syllabus;
+                    document.getElementById('syllabusResult').innerText = request.result.syllabus;
+                    document.getElementById('viewSyllabusBtn').style.display = 'inline';
+                }
+            };
+
+            request.onerror = function() {
+                console.error("Failed to load syllabus.");
+            };
+        }
+
+        document.getElementById('manualSyllabusForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const syllabusText = document.getElementById('syllabusText').value;
+
+            if (syllabusText.trim() !== '') {
+                saveSyllabusToDB(syllabusText);
+            } else {
+                document.getElementById('syllabusResult').innerText = 'Please type your syllabus.';
+            }
+        });
+
+
+        document.getElementById('viewSyllabusBtn').addEventListener('click', function() {
+    const syllabusResult = document.getElementById('syllabusResult');
+    const isHidden = window.getComputedStyle(syllabusResult).display === 'none';
+    
+    if (isHidden) {
+        syllabusResult.style.display = 'block';
+        this.innerText = 'Hide Saved Syllabus';
+    } else {
+        syllabusResult.style.display = 'none';
+        this.innerText = 'View Saved Syllabus';
+    }
+});
+
+
+    </script>
+</body>
+</html>

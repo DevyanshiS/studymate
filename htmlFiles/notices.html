@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notices</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        /* Notice Board Container */
+        #noticeBoard {
+            max-width: 600px;
+            width: 100%;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        /* Notice Input Area */
+        #inputContainer {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        #noticeInput {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .addNoticeBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background-color 0.3s;
+        }
+
+        .addNoticeBtn:hover {
+            background-color: #218838;
+        }
+
+        /* Notice List */
+        #notices {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Notice Item */
+        .notice {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            opacity: 0;
+            animation: slideIn 0.5s forwards;
+        }
+
+        /* Delete Button */
+        .deleteBtn {
+            background: none;
+            border: none;
+            color: #ff6347;
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .deleteBtn:hover {
+            color: #ff4500;
+        }
+
+        /* Slide in Animation */
+        @keyframes slideIn {
+            from {
+                transform: translateY(10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h2>Notices</h2>
+    <div id="noticeBoard">
+        <div id="inputContainer">
+            <input type="text" id="noticeInput" placeholder="Type your notice here..." />
+            <button class="addNoticeBtn" onclick="addNotice()">Pin</button>
+        </div>
+        <ul id="notices"></ul>
+    </div>
+
+    <script>
+        // Load notices from localStorage
+        document.addEventListener("DOMContentLoaded", loadNotices);
+
+        function loadNotices() {
+            const notices = JSON.parse(localStorage.getItem("notices")) || [];
+            notices.forEach(notice => {
+                createNoticeElement(notice);
+            });
+        }
+
+        // Add notice and save to localStorage
+        function addNotice() {
+            const input = document.getElementById("noticeInput");
+            const noticeText = input.value.trim();
+            
+            if (noticeText === "") {
+                alert("Please enter a notice.");
+                return;
+            }
+
+            createNoticeElement(noticeText);
+            saveNotice(noticeText);
+
+            // Clear input field
+            input.value = "";
+        }
+
+        function createNoticeElement(noticeText) {
+            const noticesContainer = document.getElementById("notices");
+
+            // Create notice element
+            const noticeItem = document.createElement("li");
+            noticeItem.className = "notice";
+            noticeItem.innerHTML = `
+                ${noticeText}
+                <button class="deleteBtn" onclick="deleteNotice(this)">×</button>
+            `;
+
+            // Add to the notice list
+            noticesContainer.appendChild(noticeItem);
+        }
+
+        function saveNotice(noticeText) {
+            const notices = JSON.parse(localStorage.getItem("notices")) || [];
+            notices.push(noticeText);
+            localStorage.setItem("notices", JSON.stringify(notices));
+        }
+
+        function deleteNotice(button) {
+            const noticeItem = button.parentElement;
+            const noticeText = noticeItem.innerText.slice(0, -1); // Exclude "×"
+            
+            // Remove from localStorage
+            let notices = JSON.parse(localStorage.getItem("notices")) || [];
+            notices = notices.filter(notice => notice !== noticeText);
+            localStorage.setItem("notices", JSON.stringify(notices));
+
+            // Remove the notice element
+            noticeItem.remove();
+        }
+    </script>
+</body>
+</html>

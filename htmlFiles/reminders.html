@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reminders</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+    
+        h2, h3 {
+            color: #2c3e50;
+        }
+    
+        /* Container styling */
+        div {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 100%;
+            margin-top: 20px;
+        }
+    
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    
+        input[type="text"],
+        input[type="date"],
+        input[type="time"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            color: #333;
+        }
+    
+        button {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+    
+        button:hover {
+            background-color: #2980b9;
+        }
+    
+        /* Reminder list styling */
+        #reminderList {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+    
+        #reminderList li {
+            background-color: #ecf0f1;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    
+        #reminderList li:hover {
+            background-color: #dfe6e9;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+    </style>
+    
+</head>
+<body>
+    <h2>Reminders</h2>
+    <div>
+        <h3>Set a Reminder</h3>
+        <label for="reminderTitle">Title:</label>
+        <input type="text" id="reminderTitle" placeholder="Reminder title" required>
+        <br>
+        <label for="reminderDate">Date:</label>
+        <input type="date" id="reminderDate" required>
+        <br>
+        <label for="reminderTime">Time:</label>
+        <input type="time" id="reminderTime" required>
+        <br>
+        <button onclick="addReminder()">Set Reminder</button>
+    </div>
+
+    <h3>Saved Reminders</h3>
+    <ul id="reminderList"></ul>
+
+    <script>
+        let db;
+
+        // Check if the user has already granted permission for notifications
+        function requestNotificationPermission() {
+            if (Notification.permission === "default") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        alert("You will receive notifications for your reminders.");
+                    } else {
+                        alert("Notifications are disabled. Enable them to receive reminder alerts.");
+                    }
+                });
+            }
+        }
+
+        // Call the function to request permission when the page loads
+        window.onload = requestNotificationPermission;
+
+        // Open or create an IndexedDB database
+        const request = indexedDB.open("ReminderDB", 1);
+
+        request.onupgradeneeded = function (event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains("reminders")) {
+                db.createObjectStore("reminders", { keyPath: "id", autoIncrement: true });
+            }
+        };
+
+        request.onsuccess = function (event) {
+            db = event.target.result;
+            loadReminders();
+        };
+
+        request.onerror = function (event) {
+            console.error("Database error:", event.target.errorCode);
+        };
+
+        function addReminder() {
+            const title = document.getElementById("reminderTitle").value;
+            const date = document.getElementById("reminderDate").value;
+            const time = document.getElementById("reminderTime").value;
+
+            if (!title || !date || !time) {
+                alert("Please fill out all fields.");
+                return;
+            }
+
+            const dateTime = new Date(`${date}T${time}`);
+
+            const transaction = db.transaction(["reminders"], "readwrite");
+            const reminderStore = transaction.objectStore("reminders");
+            const reminder = { title, dateTime: dateTime.getTime() };
+            reminderStore.add(reminder);
+
+            transaction.oncomplete = function () {
+                loadReminders();
+                document.getElementById("reminderTitle").value = "";
+                document.getElementById("reminderDate").value = "";
+                document.getElementById("reminderTime").value = "";
+            };
+
+            transaction.onerror = function (event) {
+                console.error("Error saving reminder:", event.target.errorCode);
+            };
+        }
+
+        function loadReminders() {
+            const transaction = db.transaction(["reminders"], "readonly");
+            const reminderStore = transaction.objectStore("reminders");
+            const reminderList = document.getElementById("reminderList");
+            reminderList.innerHTML = "";
+
+            reminderStore.openCursor().onsuccess = function (event) {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const reminder = cursor.value;
+                    const listItem = document.createElement("li");
+                    const dateTime = new Date(reminder.dateTime).toLocaleString();
+
+                    listItem.innerHTML = `
+                        ${reminder.title} - ${dateTime}
+                        <button class="delete-btn" onclick="deleteReminder(${reminder.id})">&times;</button>
+                    `;
+                    reminderList.appendChild(listItem);
+                    cursor.continue();
+                }
+            };
+        }
+
+        // Function to check and notify the user of any due reminders
+        function checkReminders() {
+            const transaction = db.transaction(["reminders"], "readonly");
+            const reminderStore = transaction.objectStore("reminders");
+            const now = new Date().getTime();
+
+            reminderStore.openCursor().onsuccess = function (event) {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const reminder = cursor.value;
+                    if (now >= reminder.dateTime && now < reminder.dateTime + 60000) { // Within a 1-minute window
+                        if (Notification.permission === "granted") {
+                            new Notification("Reminder", {
+                                body: `It's time for: ${reminder.title}`
+                            });
+                        } else {
+                            alert(`Reminder: ${reminder.title}`);
+                        }
+                        deleteReminder(reminder.id); // Remove reminder after alerting
+                    }
+                    cursor.continue();
+                }
+            };
+        }
+
+        function deleteReminder(id) {
+            const transaction = db.transaction(["reminders"], "readwrite");
+            const reminderStore = transaction.objectStore("reminders");
+            reminderStore.delete(id).onsuccess = function () {
+                loadReminders();
+            };
+        }
+
+        setInterval(checkReminders, 60000);
+    </script>
+</body>
+</html>

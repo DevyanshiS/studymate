@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Schedule</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f7f9fc;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        /* Date and Time Display */
+        #currentDateTime {
+            margin: 20px;
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        /* Task Input Container */
+        #taskInputContainer {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        #taskInput, #startTime, #endTime {
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .addTaskBtn {
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .addTaskBtn:hover {
+            background-color: #218838;
+        }
+
+        /* Task List */
+        #taskList {
+            max-width: 600px;
+            width: 100%;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Task Item */
+        .task {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+        }
+
+        /* Task Info */
+        .task-info {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Delete Button */
+        .deleteBtn {
+            background: none;
+            border: none;
+            color: #ff6347;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .deleteBtn:hover {
+            color: #ff4500;
+        }
+    </style>
+</head>
+<body>
+    <h2>Day Schedule</h2>
+    <div id="currentDateTime"></div>
+
+    <div id="taskInputContainer">
+        <input type="text" id="taskInput" placeholder="Task Description" />
+        
+        <div>
+            <label for="startTime">Start Time:</label>
+            <input type="time" id="startTime" placeholder="Start Time" />
+        </div>
+        
+        <div>
+            <label for="endTime">End Time:</label>
+            <input type="time" id="endTime" placeholder="End Time" />
+        </div>
+
+        <button class="addTaskBtn" onclick="addTask()">Add Task</button>
+    </div>
+
+    <ul id="taskList"></ul>
+
+    <script>
+        // Display current day, date, and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateString = now.toLocaleDateString(undefined, options);
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            document.getElementById("currentDateTime").innerText = `${dateString}, ${timeString}`;
+        }
+
+        setInterval(updateDateTime, 1000); // Update every second
+
+        // Load tasks from localStorage
+        document.addEventListener("DOMContentLoaded", loadTasks);
+
+        function loadTasks() {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks.forEach(task => {
+                createTaskElement(task.description, task.start, task.end);
+            });
+        }
+
+        // Add task and save to localStorage
+        function addTask() {
+            const description = document.getElementById("taskInput").value.trim();
+            const start = document.getElementById("startTime").value;
+            const end = document.getElementById("endTime").value;
+
+            if (description === "" || start === "" || end === "") {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            if (end <= start) {
+                alert("End time must be after start time.");
+                return;
+            }
+
+            createTaskElement(description, start, end);
+            saveTask(description, start, end);
+
+            // Clear input fields
+            document.getElementById("taskInput").value = "";
+            document.getElementById("startTime").value = "";
+            document.getElementById("endTime").value = "";
+        }
+
+        function createTaskElement(description, start, end) {
+            const taskList = document.getElementById("taskList");
+
+            // Create task element
+            const taskItem = document.createElement("li");
+            taskItem.className = "task";
+            taskItem.innerHTML = `
+                <div class="task-info">
+                    <span><strong>Task:</strong> ${description}</span>
+                    <span><strong>From:</strong> ${start}</span>
+                    <span><strong>To:</strong> ${end}</span>
+                </div>
+                <button class="deleteBtn" onclick="deleteTask(this)">×</button>
+            `;
+
+            // Add to the task list
+            taskList.appendChild(taskItem);
+        }
+
+        function saveTask(description, start, end) {
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks.push({ description, start, end });
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        function deleteTask(button) {
+            const taskItem = button.parentElement;
+            const taskDescription = taskItem.querySelector(".task-info span").innerText.replace("Task: ", "").trim();
+            
+            // Remove from localStorage
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks = tasks.filter(task => task.description !== taskDescription);
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+
+            // Remove the task element
+            taskItem.remove();
+        }
+    </script>
+</body>
+</html>

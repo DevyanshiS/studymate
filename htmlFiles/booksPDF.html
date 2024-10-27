@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Books</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        button {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        #successMessage {
+            color: green;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload Books</h1>
+    <input type="file" id="bookInput">
+    <button onclick="saveBook()">Upload</button>
+
+    <h2>Uploaded Books</h2>
+    <table id="bookTable">
+        <thead>
+            <tr>
+                <th>Book Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="bookList">
+            <!-- Uploaded books will be displayed here -->
+        </tbody>
+    </table>
+    <script>
+        // Open IndexedDB and create an object store for 'books' if it doesn't already exist
+        let db;
+        const request = indexedDB.open("StudyResourcesDB", 1);
+
+        request.onupgradeneeded = function (event) {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains("books")) {
+                db.createObjectStore("books", { keyPath: "id", autoIncrement: true });
+            }
+        };
+
+        request.onsuccess = function (event) {
+            db = event.target.result;
+            loadBooks(); // Load saved books on page load
+        };
+
+        request.onerror = function (event) {
+            console.error("IndexedDB error:", event.target.errorCode);
+        };
+
+        // Function to save a book in IndexedDB after checking for duplicates
+        function saveBook() {
+            const fileInput = document.getElementById("bookInput");
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert("Please select a file to upload.");
+                return;
+            }
+        
+            const transaction = db.transaction(["books"], "readonly");
+            const bookStore = transaction.objectStore("books");
+        
+            // Check if a book with the same name already exists
+            const checkRequest = bookStore.openCursor();
+            checkRequest.onsuccess = function (event) {
+                const cursor = event.target.result;
+                if (cursor) {
+                    if (cursor.value.name === file.name) {
+                        alert("A file with this name already exists!");
+                        return; // Stop further execution
+                    }
+                    cursor.continue();
+                } else {
+                    // If no duplicate is found, proceed to save the file
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const bookContent = event.target.result;
+                        const transaction = db.transaction(["books"], "readwrite");
+                        const bookStore = transaction.objectStore("books");
+                        const book = { name: file.name, content: bookContent };
+                        bookStore.add(book);
+                    
+                        transaction.oncomplete = function () {
+                            console.log("Book saved successfully!");
+                            loadBooks(); // Refresh the book list
+                            fileInput.value = ""; // Clear the file input after upload
+                        };
+                    
+                        transaction.onerror = function (event) {
+                            console.error("Error saving book:", event.target.errorCode);
+                        };
+                    };
+                    reader.readAsDataURL(file); // Read the file as a Data URL for easy download
+                }
+            };
+        
+            checkRequest.onerror = function (event) {
+                console.error("Error checking for duplicates:", event.target.errorCode);
+            };
+        }
+
+        // Function to load all books from IndexedDB and display them in a table
+        function loadBooks() {
+            const transaction = db.transaction(["books"], "readonly");
+            const bookStore = transaction.objectStore("books");
+            const bookList = document.getElementById("bookList");
+            bookList.innerHTML = ""; // Clear existing list
+        
+            bookStore.openCursor().onsuccess = function (event) {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const book = cursor.value;
+                    const row = document.createElement("tr");
+                
+                    const nameCell = document.createElement("td");
+                    const downloadLink = document.createElement("a");
+                    downloadLink.href = book.content; // Set download URL
+                    downloadLink.download = book.name; // Set the filename for download
+                    downloadLink.textContent = book.name;
+                    nameCell.appendChild(downloadLink);
+                    row.appendChild(nameCell);
+                
+                    const actionCell = document.createElement("td");
+                    const deleteButton = document.createElement("button");
+                    deleteButton.textContent = "Delete";
+                    deleteButton.onclick = function () {
+                        deleteBook(book.id);
+                    };
+                    actionCell.appendChild(deleteButton);
+                    row.appendChild(actionCell);
+                
+                    bookList.appendChild(row);
+                
+                    cursor.continue();
+                }
+            };
+        }
+        
+        // Function to delete a book by ID
+        function deleteBook(id) {
+            const transaction = db.transaction(["books"], "readwrite");
+            const bookStore = transaction.objectStore("books");
+            bookStore.delete(id);
+        
+            transaction.oncomplete = function () {
+                console.log("Book deleted successfully!");
+                loadBooks(); // Refresh the book list
+            };
+        
+            transaction.onerror = function (event) {
+                console.error("Error deleting book:", event.target.errorCode);
+            };
+        }
+
+
+
+    </script>
+</body>
+</html>
+
